@@ -6,10 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/session': 'http://localhost:8000',
-      '/upload': 'http://localhost:8000',
-      '/chat': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
+  '/session': 'http://localhost:8000',
+  '/upload': 'http://localhost:8000',
+  '/chat': 'http://localhost:8000',
+  '/tts': 'http://localhost:8000',
+  '/health': 'http://localhost:8000',
     },
   },
 })

@@ -11,6 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from routers import session, upload, chat
 from dependencies import get_session_manager
 from config import get_settings
+from routers import session, tts, upload, chat
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,6 +59,7 @@ app.add_middleware(
 app.include_router(session.router)
 app.include_router(upload.router)
 app.include_router(chat.router)
+app.include_router(tts.router)
 
 
 @app.get("/health")

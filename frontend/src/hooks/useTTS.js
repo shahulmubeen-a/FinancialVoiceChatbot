@@ -1,36 +1,50 @@
 import { useRef, useCallback } from 'react'
+import { fetchTTSAudio } from '../services/api'
 
 export function useTTS() {
-  const utteranceRef = useRef(null)
+  const audioRef = useRef(null)
 
-  const speak = useCallback((text) => {
-    if (!window.speechSynthesis) return
+  const speak = useCallback(async (text) => {
+    // Stop anything currently playing
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
 
-    // Cancel anything currently playing
-    window.speechSynthesis.cancel()
+    try {
+      const url = await fetchTTSAudio(text)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.play()
 
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 1.0
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
+      // Clean up object URL after playback
+      audio.onended = () => {
+        URL.revokeObjectURL(url)
+        audioRef.current = null
+      }
+    } catch (err) {
+      console.warn('ElevenLabs TTS failed, falling back to browser TTS:', err)
 
-    // Prefer a natural-sounding English voice if available
-    const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(
-      (v) => v.lang === 'en-US' && v.localService
-    ) || voices.find((v) => v.lang.startsWith('en'))
-
-    if (preferred) utterance.voice = preferred
-
-    utteranceRef.current = utterance
-    window.speechSynthesis.speak(utterance)
+      // Fallback to browser TTS if API fails
+      if (window.speechSynthesis) {
+        const utterance = new SpeechSynthesisUtterance(text)
+        const voices = window.speechSynthesis.getVoices()
+        const preferred = voices.find(
+          (v) => v.lang === 'en-US' && v.localService
+        ) || voices.find((v) => v.lang.startsWith('en'))
+        if (preferred) utterance.voice = preferred
+        window.speechSynthesis.speak(utterance)
+      }
+    }
   }, [])
 
   const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
     window.speechSynthesis?.cancel()
   }, [])
 
-  const isSupported = typeof window !== 'undefined' && !!window.speechSynthesis
-
-  return { speak, stop, isSupported }
+  return { speak, stop }
 }

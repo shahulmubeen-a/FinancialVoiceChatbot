@@ -32,3 +32,14 @@ export async function streamChat(sessionId, message) {
   if (!res.ok) throw new Error('Chat request failed')
   return res
 }
+
+export async function fetchTTSAudio(text) {
+  const res = await fetch('/tts/speak', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!res.ok) throw new Error('TTS failed')
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
