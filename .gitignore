@@ -1,2 +1,21 @@
-/backend/.venv/
-/backend/.env
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+
+# Tmp uploads
+/tmp/finance_assistant/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
