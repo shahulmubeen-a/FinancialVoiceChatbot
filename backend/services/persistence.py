@@ -10,10 +10,12 @@ settings = get_settings()
 
 
 def get_conn():
+    # Only require SSL if we are connecting to a remote Supabase DB
+    ssl_mode = "require" if "supabase.co" in settings.database_url else "prefer"
     conn = psycopg2.connect(
         settings.database_url,
         cursor_factory=psycopg2.extras.RealDictCursor,
-        sslmode="require",   # Supabase requires SSL
+        sslmode=ssl_mode,
     )
     return conn
 
