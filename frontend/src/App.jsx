@@ -29,8 +29,6 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-
-      {/* Top bar */}
       <div style={{
         padding: '10px 16px',
         borderBottom: '1px solid #ddd',
@@ -54,13 +52,11 @@ export default function App() {
 
       <StatusBar />
 
-      {/* Body: sidebar + chat */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <SessionList />
-        <ChatWindow interimText={voice.interimText} />
+        <ChatWindow />
       </div>
 
-      {/* Footer disclaimer */}
       <div style={{
         padding: '6px 16px',
         borderTop: '1px solid #eee',
@@ -72,7 +68,6 @@ export default function App() {
       }}>
         General financial guidance only — not regulated financial advice.
       </div>
-
     </div>
   )
 }

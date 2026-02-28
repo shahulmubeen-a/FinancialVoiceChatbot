@@ -8,7 +8,7 @@ export default function SessionList() {
   const sessionId = useChatStore((s) => s.sessionId)
   const setSessionId = useChatStore((s) => s.setSessionId)
   const setMessages = useChatStore((s) => s.setMessages)
-  const setDocName = useChatStore((s) => s.setDocName)
+  const clearScreen = useChatStore((s) => s.clearScreen)
 
   const refresh = () => {
     getAllSessions().then(setSessionList).catch(console.error)
@@ -20,7 +20,6 @@ export default function SessionList() {
 
   const handleLoad = async (id, docName) => {
     const raw = await getSessionMessages(id)
-    // Bug 1 fix: mark all loaded messages as fromHistory so TTS is skipped
     const messages = raw.map((m, i) => ({
       id: i,
       role: m.role,
@@ -30,26 +29,24 @@ export default function SessionList() {
     }))
     setMessages(messages)
     setSessionId(id)
-    setDocName(docName || null)
+    useChatStore.getState().setDocName(docName || null)
+    useChatStore.getState().setInterimText('')  // clear any lingering transcript
   }
 
   const handleNew = async () => {
     const data = await createSession()
     setSessionId(data.session_id)
-    setMessages([])
-    setDocName(null)
+    clearScreen()   // clears messages + interimText + docName in one go
     refresh()
   }
 
   const handleDelete = async (e, id) => {
     e.stopPropagation()
     await deleteSession(id)
-    // Bug 3 fix: if deleting active session, start fresh — otherwise just refresh
     if (id === sessionId) {
       const data = await createSession()
       setSessionId(data.session_id)
-      setMessages([])
-      setDocName(null)
+      clearScreen()  // clears everything on screen
     }
     refresh()
   }

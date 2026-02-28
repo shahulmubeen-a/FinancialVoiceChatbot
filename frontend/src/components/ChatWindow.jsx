@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react'
 import MessageBubble from './MessageBubble'
 import useChatStore from '../store/chatStore'
 
-export default function ChatWindow({ interimText }) {
+export default function ChatWindow() {
   const messages = useChatStore((s) => s.messages)
+  const interimText = useChatStore((s) => s.interimText)  // from store now
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export default function ChatWindow({ interimText }) {
       flexDirection: 'column',
       gap: 10,
     }}>
-      {messages.length === 0 && (
+      {messages.length === 0 && !interimText && (
         <p style={{ color: '#aaa', textAlign: 'center', marginTop: 40 }}>
           Click "Start Listening" and ask a financial question.<br />
           Optionally upload a payslip for personalised guidance.
@@ -30,7 +31,6 @@ export default function ChatWindow({ interimText }) {
         <MessageBubble key={msg.id} message={msg} />
       ))}
 
-      {/* Live interim transcript shown as the user speaks */}
       {interimText && (
         <div style={{
           alignSelf: 'flex-end',

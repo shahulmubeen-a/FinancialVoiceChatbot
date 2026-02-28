@@ -22,6 +22,10 @@ const useChatStore = create((set) => ({
     return { messages: msgs }
   }),
 
+  // Moved from local hook state so any component can clear it
+  interimText: '',
+  setInterimText: (text) => set({ interimText: text }),
+
   status: 'idle',
   setStatus: (status) => set({ status }),
 
@@ -36,6 +40,9 @@ const useChatStore = create((set) => ({
 
   sessionList: [],
   setSessionList: (list) => set({ sessionList: list }),
+
+  // Clears everything visible on screen — call this on new/delete
+  clearScreen: () => set({ messages: [], interimText: '', docName: null }),
 }))
 
 export default useChatStore

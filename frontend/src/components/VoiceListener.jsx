@@ -15,7 +15,6 @@ export default function VoiceListener() {
   const { sendMessage } = useSSE()
   const { stop: stopTTS } = useTTS()
 
-  // Bug 3: called by the hook when silence timer fires and recording auto-stops
   const onAutoStop = useCallback(() => {
     setSttActive(false)
     setStatus('idle')
@@ -27,10 +26,10 @@ export default function VoiceListener() {
     await sendMessage(sessionId, text)
   }, [status, addMessage, sendMessage, sessionId])
 
-  const { start, stop, isListening, interimText } = useSpeechRecognition({
+  const { start, stop } = useSpeechRecognition({
     onFinalTranscript,
     onSpeechStart: stopTTS,
-    onAutoStop,              // Bug 3: sync button state when auto-stopped
+    onAutoStop,
   })
 
   const handleToggle = () => {
@@ -47,5 +46,5 @@ export default function VoiceListener() {
     }
   }
 
-  return { interimText, handleToggle, isListening, sttActive }
+  return { handleToggle, sttActive }
 }
