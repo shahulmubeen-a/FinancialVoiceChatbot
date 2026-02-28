@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE || ''
+export const BASE = import.meta.env.VITE_API_BASE || ''
 
 export async function createSession() {
   const res = await fetch(`${BASE}/session/new`, { method: 'POST' })

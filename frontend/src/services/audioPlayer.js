@@ -1,34 +1,26 @@
-// Module-level singleton — only one audio instance ever exists
-// This means stop() from ANY component always stops the right thing
+import { BASE } from './api'
 
 let _audio = null
 let _abortController = null
 let _onEndCallback = null
 
 export function playAudio(url, { onStart, onEnd } = {}) {
-  stopAudio()  // always stop previous before starting new
-
-  _abortController = null  // fetch already done at this point, url is ready
-
+  stopAudio()
+  _abortController = null
   _audio = new Audio(url)
   _onEndCallback = onEnd
 
-  _audio.onplay = () => {
-    if (onStart) onStart()
-  }
-
+  _audio.onplay = () => { if (onStart) onStart() }
   _audio.onended = () => {
     URL.revokeObjectURL(url)
     _audio = null
     if (onEnd) onEnd()
   }
-
   _audio.onerror = () => {
     URL.revokeObjectURL(url)
     _audio = null
     if (onEnd) onEnd()
   }
-
   _audio.play().catch((e) => {
     console.error('Audio play error:', e)
     if (onEnd) onEnd()
@@ -36,11 +28,10 @@ export function playAudio(url, { onStart, onEnd } = {}) {
 }
 
 export function fetchAndPlay(text, signal, { onStart, onEnd, onFallback } = {}) {
-  // Returns a cancel function
   const controller = new AbortController()
   _abortController = controller
 
-  fetch('/tts/speak', {
+  fetch(`${BASE}/tts/speak`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -64,20 +55,15 @@ export function fetchAndPlay(text, signal, { onStart, onEnd, onFallback } = {}) 
 }
 
 export function stopAudio() {
-  // Cancel in-flight fetch
   if (_abortController) {
     _abortController.abort()
     _abortController = null
   }
-
-  // Stop playing audio
   if (_audio) {
     _audio.pause()
     _audio.src = ''
     _audio = null
   }
-
-  // Fire end callback so UI state updates
   if (_onEndCallback) {
     _onEndCallback()
     _onEndCallback = null
