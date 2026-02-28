@@ -5,6 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     groq_api_key: str = Field(default="", validation_alias="GROQ_API_KEY")
     elevenlabs_api_key: str = Field(default="", validation_alias="ELEVENLABS_API_KEY")
+    database_url: str = Field(default="", validation_alias="DATABASE_URL")
     allowed_origin: str = "http://localhost:5173"
     session_ttl_minutes: int = 30
     max_file_size_mb: int = 10
