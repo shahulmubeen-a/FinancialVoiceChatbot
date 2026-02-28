@@ -1,4 +1,4 @@
-const BASE = ''
+const BASE = import.meta.env.VITE_API_BASE || ''
 
 export async function createSession() {
   const res = await fetch(`${BASE}/session/new`, { method: 'POST' })
@@ -44,13 +44,12 @@ export async function streamChat(sessionId, message) {
   return res
 }
 
-// Bug 1 fix: accept AbortSignal so caller can cancel mid-stream
 export async function fetchTTSAudio(text, signal) {
-  const res = await fetch('/tts/speak', {
+  const res = await fetch(`${BASE}/tts/speak`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
-    signal,  // AbortController signal
+    signal,
   })
   if (!res.ok) throw new Error('TTS failed')
   const blob = await res.blob()
