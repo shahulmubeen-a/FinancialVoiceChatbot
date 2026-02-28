@@ -20,11 +20,13 @@ export default function SessionList() {
 
   const handleLoad = async (id, docName) => {
     const raw = await getSessionMessages(id)
+    // Bug 1 fix: mark all loaded messages as fromHistory so TTS is skipped
     const messages = raw.map((m, i) => ({
       id: i,
       role: m.role,
       text: m.text,
       done: true,
+      fromHistory: true,
     }))
     setMessages(messages)
     setSessionId(id)
@@ -42,8 +44,8 @@ export default function SessionList() {
   const handleDelete = async (e, id) => {
     e.stopPropagation()
     await deleteSession(id)
+    // Bug 3 fix: if deleting active session, start fresh — otherwise just refresh
     if (id === sessionId) {
-      // If deleting active session, start a new one
       const data = await createSession()
       setSessionId(data.session_id)
       setMessages([])
@@ -102,7 +104,7 @@ export default function SessionList() {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}>
-                {s.title || 'New chat'}
+                {s.title || 'Chat'}
               </div>
               {s.doc_name && (
                 <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>

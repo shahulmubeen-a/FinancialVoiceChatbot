@@ -1,13 +1,14 @@
 import { useRef, useState, useCallback } from 'react'
 
-const SILENCE_TIMEOUT_MS = 2000  // submit after 2s of silence
+const SILENCE_TIMEOUT_MS = 2000
 
-export function useSpeechRecognition({ onFinalTranscript }) {
+export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
   const recognitionRef = useRef(null)
   const silenceTimerRef = useRef(null)
+  const accumulatedFinalRef = useRef('')   // ref instead of local var so it persists across callbacks
+  const isWarmingUpRef = useRef(false)
   const [interimText, setInterimText] = useState('')
   const [isListening, setIsListening] = useState(false)
-  const hasSpokenRef = useRef(false)
 
   const clearSilenceTimer = () => {
     if (silenceTimerRef.current) {
@@ -16,15 +17,21 @@ export function useSpeechRecognition({ onFinalTranscript }) {
     }
   }
 
-  const startSilenceTimer = useCallback((finalSoFar) => {
+  const resetTranscript = useCallback(() => {
+    accumulatedFinalRef.current = ''
+    setInterimText('')
+  }, [])
+
+  const startSilenceTimer = useCallback(() => {
     clearSilenceTimer()
     silenceTimerRef.current = setTimeout(() => {
-      if (finalSoFar.trim()) {
-        setInterimText('')
-        onFinalTranscript(finalSoFar.trim())
+      const finalText = accumulatedFinalRef.current.trim()
+      if (finalText) {
+        resetTranscript()                  // Bug 2 fix: clear before firing
+        onFinalTranscript(finalText)
       }
     }, SILENCE_TIMEOUT_MS)
-  }, [onFinalTranscript])
+  }, [onFinalTranscript, resetTranscript])
 
   const start = useCallback(() => {
     const SpeechRecognition =
@@ -40,15 +47,21 @@ export function useSpeechRecognition({ onFinalTranscript }) {
     recognition.interimResults = true
     recognition.lang = 'en-US'
 
-    let accumulatedFinal = ''
-
     recognition.onstart = () => {
       setIsListening(true)
-      hasSpokenRef.current = false
-      accumulatedFinal = ''
+      accumulatedFinalRef.current = ''
+      // Bug 4 fix: brief warmup period — STT engine needs ~600ms to initialise
+      // During warmup we accept results but don't start the silence timer
+      isWarmingUpRef.current = true
+      setTimeout(() => {
+        isWarmingUpRef.current = false
+      }, 600)
     }
 
     recognition.onresult = (event) => {
+      // Feature 2: interrupt TTS the moment user speaks
+      if (onSpeechStart) onSpeechStart()
+
       let interim = ''
       let newFinal = ''
 
@@ -62,50 +75,43 @@ export function useSpeechRecognition({ onFinalTranscript }) {
       }
 
       if (newFinal) {
-        accumulatedFinal += newFinal
-        hasSpokenRef.current = true
-        // Reset silence timer every time we get a final chunk
-        startSilenceTimer(accumulatedFinal)
+        accumulatedFinalRef.current += newFinal
+        if (!isWarmingUpRef.current) {
+          startSilenceTimer()
+        }
       }
 
-      // Show live interim transcript
-      setInterimText(accumulatedFinal + interim)
+      setInterimText(accumulatedFinalRef.current + interim)
     }
 
     recognition.onerror = (event) => {
-      // 'no-speech' is normal — just means silence, not an error
       if (event.error !== 'no-speech') {
         console.error('STT error:', event.error)
       }
     }
 
     recognition.onend = () => {
-      // Auto-restart if still supposed to be listening
-      // This handles the browser cutting off after ~60s
+      // Auto-restart to keep listening — browser cuts off after ~60s
       if (recognitionRef.current === recognition) {
-        try {
-          recognition.start()
-        } catch {
-          // already started — ignore
-        }
+        try { recognition.start() } catch { /* already starting */ }
       }
     }
 
     recognitionRef.current = recognition
     recognition.start()
     return true
-  }, [startSilenceTimer])
+  }, [startSilenceTimer, onSpeechStart])
 
   const stop = useCallback(() => {
     clearSilenceTimer()
     if (recognitionRef.current) {
-      recognitionRef.current.onend = null  // prevent auto-restart
+      recognitionRef.current.onend = null
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
     setIsListening(false)
-    setInterimText('')
-  }, [])
+    resetTranscript()
+  }, [resetTranscript])
 
   return { start, stop, isListening, interimText }
 }

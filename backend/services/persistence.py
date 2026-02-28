@@ -1,5 +1,4 @@
 import sqlite3
-import json
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -42,20 +41,6 @@ def init_db() -> None:
     logger.info("Database initialised.")
 
 
-def save_session(session_id: str, title: Optional[str] = None, doc_name: Optional[str] = None) -> None:
-    now = datetime.utcnow().isoformat()
-    with get_conn() as conn:
-        conn.execute("""
-            INSERT INTO sessions (id, title, created_at, last_active, doc_name)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                last_active = excluded.last_active,
-                title = COALESCE(excluded.title, sessions.title),
-                doc_name = COALESCE(excluded.doc_name, sessions.doc_name)
-        """, (session_id, title, now, now, doc_name))
-        conn.commit()
-
-
 def touch_session(session_id: str) -> None:
     now = datetime.utcnow().isoformat()
     with get_conn() as conn:
@@ -85,8 +70,18 @@ def update_session_doc(session_id: str, doc_name: str) -> None:
 
 
 def save_message(session_id: str, role: str, text: str) -> None:
+    """
+    Persists a message. Also ensures the session row exists —
+    sessions are NOT written to DB on creation, only on first message.
+    This prevents empty 'New Chat' ghost entries appearing in the sidebar.
+    """
     now = datetime.utcnow().isoformat()
     with get_conn() as conn:
+        # Create session row if it doesn't exist yet
+        conn.execute("""
+            INSERT OR IGNORE INTO sessions (id, title, created_at, last_active, doc_name)
+            VALUES (?, NULL, ?, ?, NULL)
+        """, (session_id, now, now))
         conn.execute(
             "INSERT INTO messages (session_id, role, text, created_at) VALUES (?, ?, ?, ?)",
             (session_id, role, text, now)
@@ -105,10 +100,16 @@ def get_messages(session_id: str) -> list:
 
 
 def get_all_sessions() -> list:
+    """Only returns sessions that have at least one message — no ghost entries."""
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT id, title, created_at, last_active, doc_name FROM sessions ORDER BY last_active DESC"
-        ).fetchall()
+        rows = conn.execute("""
+            SELECT s.id, s.title, s.created_at, s.last_active, s.doc_name
+            FROM sessions s
+            WHERE EXISTS (
+                SELECT 1 FROM messages m WHERE m.session_id = s.id
+            )
+            ORDER BY s.last_active DESC
+        """).fetchall()
     return [dict(r) for r in rows]
 
 

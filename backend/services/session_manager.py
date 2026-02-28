@@ -4,9 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from services.rag_pipeline import DocumentStore
-from services.persistence import (
-    save_session, save_message, delete_session_from_db, touch_session
-)
+from services.persistence import delete_session_from_db, touch_session
 from models.financial import ParsedFinancialData
 from config import get_settings
 from utils.file_handler import cleanup_session_dir
@@ -27,7 +25,6 @@ class Session:
 
     def touch(self):
         self.last_active = datetime.utcnow()
-        touch_session(self.session_id)
 
     @property
     def has_document(self) -> bool:
@@ -44,8 +41,8 @@ class SessionManager:
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
         self._sessions[session_id] = Session(session_id)
-        save_session(session_id)
-        logger.info(f"Session created: {session_id}")
+        # NOT saved to DB here — only saved on first message via save_message()
+        logger.info(f"Session created in memory: {session_id}")
         return session_id
 
     def get_session(self, session_id: str) -> Optional[Session]:
@@ -53,6 +50,16 @@ class SessionManager:
         if session:
             session.touch()
         return session
+
+    def restore_session(self, session_id: str) -> Session:
+        """
+        Called when loading a historical session from the sidebar.
+        Creates an in-memory Session object without reinitialising DB.
+        """
+        if session_id not in self._sessions:
+            self._sessions[session_id] = Session(session_id)
+            logger.info(f"Restored session into memory: {session_id}")
+        return self._sessions[session_id]
 
     def delete_session(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)
@@ -68,7 +75,6 @@ class SessionManager:
                 if s.is_expired(settings.session_ttl_minutes)
             ]
             for sid in expired:
-                # Only remove from memory, keep in DB
                 self._sessions.pop(sid, None)
                 cleanup_session_dir(sid)
             if expired:

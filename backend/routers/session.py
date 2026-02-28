@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import NewSessionResponse
 from services.session_manager import SessionManager
-from services.persistence import get_all_sessions, get_messages, save_session
+from services.persistence import get_all_sessions, get_messages
 from dependencies import get_session_manager
 
 logger = logging.getLogger(__name__)

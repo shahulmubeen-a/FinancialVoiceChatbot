@@ -7,8 +7,6 @@ export function useSSE() {
 
   const sendMessage = useCallback(async (sessionId, message) => {
     setStatus('thinking')
-
-    // Add empty assistant message that we'll stream into
     addMessage({ id: Date.now(), role: 'assistant', text: '', done: false })
 
     try {
@@ -25,7 +23,7 @@ export function useSSE() {
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop()  // keep incomplete line in buffer
+        buffer = lines.pop()
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
@@ -39,14 +37,11 @@ export function useSSE() {
             const parsed = JSON.parse(data)
             if (parsed.token) appendToLast(parsed.token)
             if (parsed.error) console.error('Stream error:', parsed.error)
-          } catch {
-            // malformed line — skip
-          }
+          } catch { /* malformed line */ }
         }
       }
     } catch (err) {
       console.error('SSE error:', err)
-      setStatus('idle')
     } finally {
       markLastDone()
       setStatus('idle')

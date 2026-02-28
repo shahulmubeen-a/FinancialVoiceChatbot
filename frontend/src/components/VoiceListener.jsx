@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useSSE } from '../hooks/useSSE'
+import { useTTS } from '../hooks/useTTS'
 import useChatStore from '../store/chatStore'
 
 export default function VoiceListener() {
@@ -12,19 +13,18 @@ export default function VoiceListener() {
   const addMessage = useChatStore((s) => s.addMessage)
 
   const { sendMessage } = useSSE()
+  const { stop: stopTTS } = useTTS()
 
   const onFinalTranscript = useCallback(async (text) => {
-    // Don't fire if already processing a response
     if (status === 'thinking' || status === 'speaking') return
-
     addMessage({ id: Date.now(), role: 'user', text, done: true })
     await sendMessage(sessionId, text)
-    // Return to listening after response
     setStatus('listening')
   }, [status, addMessage, sendMessage, sessionId, setStatus])
 
   const { start, stop, isListening, interimText } = useSpeechRecognition({
     onFinalTranscript,
+    onSpeechStart: stopTTS,   // Feature 2: interrupt TTS when user starts talking
   })
 
   const handleToggle = () => {

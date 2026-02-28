@@ -1,11 +1,9 @@
 import { create } from 'zustand'
 
 const useChatStore = create((set) => ({
-  // Active session
   sessionId: null,
   setSessionId: (id) => set({ sessionId: id }),
 
-  // Messages
   messages: [],
   setMessages: (messages) => set({ messages }),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
@@ -24,19 +22,18 @@ const useChatStore = create((set) => ({
     return { messages: msgs }
   }),
 
-  // Status
   status: 'idle',
   setStatus: (status) => set({ status }),
 
-  // Document
+  isSpeaking: false,
+  setIsSpeaking: (val) => set({ isSpeaking: val }),
+
   docName: null,
   setDocName: (name) => set({ docName: name }),
 
-  // STT
   sttActive: false,
   setSttActive: (val) => set({ sttActive: val }),
 
-  // Session list (for sidebar)
   sessionList: [],
   setSessionList: (list) => set({ sessionList: list }),
 }))
