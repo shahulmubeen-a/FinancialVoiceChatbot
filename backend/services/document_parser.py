@@ -1,3 +1,7 @@
+"""
+This module handles data from the documents uploaded so that the LLM uses THIS instead of hallucinating values. 
+"""
+
 import re
 import logging
 from pathlib import Path
@@ -181,7 +185,6 @@ def parse_financial_fields(text: str) -> ParsedFinancialData:
 
     logger.info(f"Parsed {fields_found} financial fields from document")
     return data
-
 
 def parse_document(path: Path) -> Tuple[str, ParsedFinancialData]:
     raw_text = extract_raw_text(path)

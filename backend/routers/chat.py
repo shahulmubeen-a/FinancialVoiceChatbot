@@ -15,13 +15,11 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 async def _sse_generator(session, message: str, llm: ChatGroq):
     try:
         async for token in stream_response(session, message, llm):
-            payload = json.dumps({"token": token})
-            yield f"data: {payload}\n\n"
+            yield f"data: {json.dumps({'token': token})}\n\n"
         yield "data: [DONE]\n\n"
     except Exception as e:
         logger.error(f"Streaming error: {e}")
-        payload = json.dumps({"error": str(e)})
-        yield f"data: {payload}\n\n"
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
 
 @router.post("/stream")
@@ -30,9 +28,10 @@ async def chat_stream(
     manager: SessionManager = Depends(get_session_manager),
     llm: ChatGroq = Depends(get_llm),
 ):
+    # Try in-memory first, then restore from DB if it's a historical session
     session = manager.get_session(request.session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
+        session = manager.restore_session(request.session_id)
 
     return StreamingResponse(
         _sse_generator(session, request.message, llm),

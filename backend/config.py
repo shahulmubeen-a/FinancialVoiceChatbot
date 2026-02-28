@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from functools import lru_cache
 
-
 class Settings(BaseSettings):
     groq_api_key: str = Field(default="", validation_alias="GROQ_API_KEY")
     elevenlabs_api_key: str = Field(default="", validation_alias="ELEVENLABS_API_KEY")
@@ -19,7 +18,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-
 
 @lru_cache()
 def get_settings() -> Settings:

@@ -32,14 +32,31 @@ def _build_system_prompt(session: Session, query: str) -> str:
         financial_block = (
             session.parsed_data.to_prompt_block() if session.parsed_data else ""
         )
+
+        currency_sym = (
+            session.parsed_data.currency_symbol
+            if session.parsed_data
+            else "unknown"
+        )
+        currency_instruction = (
+            f"""IMPORTANT: The currency in this document is '{currency_sym}'.
+            Use '{currency_sym}' for ALL monetary values in your response.
+            Never use '$' unless the document currency is '$'."""
+        )
     else:
         doc_context = "No document uploaded yet."
         financial_block = ""
+        currency_instruction = (
+            """IMPORTANT: No document has been uploaded, so you do not know the user's
+            currency. Do NOT assume dollars or any specific currency symbol.
+            Speak in general terms like 'your income' or 'X% of your take-home pay'
+            without attaching a currency symbol. Only use a symbol if the user explicitly
+            tells you their currency."""
+        )
 
-    # Use explicit replace instead of .format() — financial docs often contain
-    # curly braces which break str.format() with a KeyError
     prompt = SYSTEM_PROMPT_TEMPLATE.replace("{document_context}", doc_context)
     prompt = prompt.replace("{financial_data_block}", financial_block)
+    prompt = prompt.replace("{currency_instruction}", currency_instruction)
     return prompt
 
 

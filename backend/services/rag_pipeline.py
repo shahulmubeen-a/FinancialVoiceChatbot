@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 _embeddings: Optional[HuggingFaceEmbeddings] = None
 
-
 def get_embeddings() -> HuggingFaceEmbeddings:
     global _embeddings
     if _embeddings is None:
@@ -21,7 +20,6 @@ def get_embeddings() -> HuggingFaceEmbeddings:
         )
         logger.info("Embedding model loaded.")
     return _embeddings
-
 
 class DocumentStore:
     """

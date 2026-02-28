@@ -13,7 +13,6 @@ settings = get_settings()
 class TTSRequest(BaseModel):
     text: str
 
-
 @router.post("/speak")
 async def speak(request: TTSRequest):
     if not settings.elevenlabs_api_key:

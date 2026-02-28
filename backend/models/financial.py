@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-
 @dataclass
 class ParsedFinancialData:
     gross_income: Optional[float] = None
@@ -20,7 +19,7 @@ class ParsedFinancialData:
     extra_fields: dict = field(default_factory=dict)
 
     def to_prompt_block(self) -> str:
-        sym = self.currency_symbol  # use detected symbol, not hardcoded $
+        sym = self.currency_symbol
 
         def fmt(val: Optional[float]) -> str:
             if val is None:

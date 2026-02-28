@@ -17,9 +17,10 @@ async def upload_document(
     session_id: str = Form(...),
     manager: SessionManager = Depends(get_session_manager),
 ):
+    # Try in-memory first, then restore from DB if it's a historical session
     session = manager.get_session(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
+        session = manager.restore_session(session_id)
 
     tmp_path = await save_upload(file, session_id)
 
@@ -54,4 +55,3 @@ async def upload_document(
         parsed_fields_found=fields_found,
         message=f"Document processed. Found {fields_found} financial field(s).",
     )
-

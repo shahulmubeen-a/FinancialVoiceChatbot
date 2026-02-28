@@ -21,13 +21,11 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 limiter = Limiter(key_func=get_remote_address)
 
-
 def _rate_limit_handler(request: Request, exc: Any) -> JSONResponse:
     return JSONResponse(
         status_code=429,
         content={"detail": "Rate limit exceeded. Please slow down."},
     )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,7 +36,6 @@ async def lifespan(app: FastAPI):
     yield
     task.cancel()
     logger.info("Finance Voice Assistant shutting down.")
-
 
 app = FastAPI(
     title="Finance Voice Assistant",
@@ -61,7 +58,6 @@ app.include_router(session.router)
 app.include_router(upload.router)
 app.include_router(chat.router)
 app.include_router(tts.router)
-
 
 @app.get("/health")
 def health():

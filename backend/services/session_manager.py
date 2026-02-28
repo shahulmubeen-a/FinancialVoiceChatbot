@@ -12,7 +12,6 @@ from utils.file_handler import cleanup_session_dir
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-
 class Session:
     def __init__(self, session_id: str):
         self.session_id = session_id
@@ -31,7 +30,7 @@ class Session:
         return self.document_store.raw_text is not None
 
     def is_expired(self, ttl_minutes: int) -> bool:
-        return datetime.utcnow() - self.last_active > timedelta(minutes=ttl_minutes)
+        return datetime.now() - self.last_active > timedelta(minutes=ttl_minutes)
 
 
 class SessionManager:
@@ -41,7 +40,6 @@ class SessionManager:
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
         self._sessions[session_id] = Session(session_id)
-        # NOT saved to DB here — only saved on first message via save_message()
         logger.info(f"Session created in memory: {session_id}")
         return session_id
 

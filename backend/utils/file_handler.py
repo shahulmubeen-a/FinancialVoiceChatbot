@@ -16,7 +16,6 @@ ALLOWED_TYPES = {
 
 TMP_BASE = Path("/tmp/finance_assistant")
 
-
 async def save_upload(file: UploadFile, session_id: str) -> Path:
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
@@ -44,7 +43,6 @@ async def save_upload(file: UploadFile, session_id: str) -> Path:
     logger.info(f"File saved for session {session_id}: {save_path.name}")
     return save_path
 
-
 def delete_file(path: Path) -> None:
     try:
         if path.exists():
@@ -52,7 +50,6 @@ def delete_file(path: Path) -> None:
             logger.info(f"Deleted tmp file: {path.name}")
     except Exception as e:
         logger.warning(f"Could not delete tmp file {path.name}: {e}")
-
 
 def cleanup_session_dir(session_id: str) -> None:
     session_dir = TMP_BASE / session_id
