@@ -36,10 +36,11 @@ def _build_system_prompt(session: Session, query: str) -> str:
         doc_context = "No document uploaded yet."
         financial_block = ""
 
-    return SYSTEM_PROMPT_TEMPLATE.format(
-        document_context=doc_context,
-        financial_data_block=financial_block,
-    )
+    # Use explicit replace instead of .format() — financial docs often contain
+    # curly braces which break str.format() with a KeyError
+    prompt = SYSTEM_PROMPT_TEMPLATE.replace("{document_context}", doc_context)
+    prompt = prompt.replace("{financial_data_block}", financial_block)
+    return prompt
 
 
 async def stream_response(
@@ -65,15 +66,12 @@ async def stream_response(
             full_response += token
             yield token
 
-    # Persist to DB
     save_message(session.session_id, "user", user_message)
     save_message(session.session_id, "assistant", full_response)
 
-    # Auto-title the session from the first user message
     if len(session.chat_history) == 0:
         title = user_message[:60] + ("..." if len(user_message) > 60 else "")
         update_session_title(session.session_id, title)
 
-    # Keep in-memory history
     session.chat_history.append(HumanMessage(content=user_message))
     session.chat_history.append(AIMessage(content=full_response))

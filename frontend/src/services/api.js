@@ -44,11 +44,13 @@ export async function streamChat(sessionId, message) {
   return res
 }
 
-export async function fetchTTSAudio(text) {
+// Bug 1 fix: accept AbortSignal so caller can cancel mid-stream
+export async function fetchTTSAudio(text, signal) {
   const res = await fetch('/tts/speak', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
+    signal,  // AbortController signal
   })
   if (!res.ok) throw new Error('TTS failed')
   const blob = await res.blob()

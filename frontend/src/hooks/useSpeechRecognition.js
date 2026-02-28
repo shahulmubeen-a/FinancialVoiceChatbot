@@ -5,7 +5,7 @@ const SILENCE_TIMEOUT_MS = 2000
 export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
   const recognitionRef = useRef(null)
   const silenceTimerRef = useRef(null)
-  const accumulatedFinalRef = useRef('')   // ref instead of local var so it persists across callbacks
+  const accumulatedFinalRef = useRef('')
   const isWarmingUpRef = useRef(false)
   const [interimText, setInterimText] = useState('')
   const [isListening, setIsListening] = useState(false)
@@ -17,9 +17,21 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     }
   }
 
+  // Bug 2 fix: only wipe transcript AFTER successful submission, not on stop
   const resetTranscript = useCallback(() => {
     accumulatedFinalRef.current = ''
     setInterimText('')
+  }, [])
+
+  const stopRecognition = useCallback(() => {
+    clearSilenceTimer()
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null  // prevent auto-restart
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+    // Bug 2 fix: do NOT wipe interimText here — keep what was spoken visible
   }, [])
 
   const startSilenceTimer = useCallback(() => {
@@ -27,18 +39,19 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     silenceTimerRef.current = setTimeout(() => {
       const finalText = accumulatedFinalRef.current.trim()
       if (finalText) {
-        resetTranscript()                  // Bug 2 fix: clear before firing
+        resetTranscript()             // clear transcript only after submission
+        stopRecognition()             // Bug 3 fix: auto-stop after each submission
         onFinalTranscript(finalText)
       }
     }, SILENCE_TIMEOUT_MS)
-  }, [onFinalTranscript, resetTranscript])
+  }, [onFinalTranscript, resetTranscript, stopRecognition])
 
   const start = useCallback(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome.')
+      alert('Speech recognition is not supported. Please use Chrome.')
       return false
     }
 
@@ -50,16 +63,11 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     recognition.onstart = () => {
       setIsListening(true)
       accumulatedFinalRef.current = ''
-      // Bug 4 fix: brief warmup period — STT engine needs ~600ms to initialise
-      // During warmup we accept results but don't start the silence timer
       isWarmingUpRef.current = true
-      setTimeout(() => {
-        isWarmingUpRef.current = false
-      }, 600)
+      setTimeout(() => { isWarmingUpRef.current = false }, 600)
     }
 
     recognition.onresult = (event) => {
-      // Feature 2: interrupt TTS the moment user speaks
       if (onSpeechStart) onSpeechStart()
 
       let interim = ''
@@ -76,9 +84,7 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
 
       if (newFinal) {
         accumulatedFinalRef.current += newFinal
-        if (!isWarmingUpRef.current) {
-          startSilenceTimer()
-        }
+        if (!isWarmingUpRef.current) startSilenceTimer()
       }
 
       setInterimText(accumulatedFinalRef.current + interim)
@@ -91,7 +97,7 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     }
 
     recognition.onend = () => {
-      // Auto-restart to keep listening — browser cuts off after ~60s
+      // Auto-restart only if still supposed to be listening
       if (recognitionRef.current === recognition) {
         try { recognition.start() } catch { /* already starting */ }
       }
@@ -102,16 +108,12 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     return true
   }, [startSilenceTimer, onSpeechStart])
 
+  // Public stop — used by the toggle button
+  // Bug 2 fix: preserve transcript text, just stop the engine
   const stop = useCallback(() => {
-    clearSilenceTimer()
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null
-      recognitionRef.current.stop()
-      recognitionRef.current = null
-    }
-    setIsListening(false)
-    resetTranscript()
-  }, [resetTranscript])
+    stopRecognition()
+    // Don't reset transcript here — user can see what was captured
+  }, [stopRecognition])
 
   return { start, stop, isListening, interimText }
 }

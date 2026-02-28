@@ -17,14 +17,20 @@ export default function VoiceListener() {
 
   const onFinalTranscript = useCallback(async (text) => {
     if (status === 'thinking' || status === 'speaking') return
+
+    // Bug 3: recognition already stopped inside useSpeechRecognition
+    // so we just sync the UI state here
+    setSttActive(false)
+    setStatus('thinking')
+
     addMessage({ id: Date.now(), role: 'user', text, done: true })
     await sendMessage(sessionId, text)
-    setStatus('listening')
-  }, [status, addMessage, sendMessage, sessionId, setStatus])
+    setStatus('idle')
+  }, [status, addMessage, sendMessage, sessionId, setStatus, setSttActive])
 
   const { start, stop, isListening, interimText } = useSpeechRecognition({
     onFinalTranscript,
-    onSpeechStart: stopTTS,   // Feature 2: interrupt TTS when user starts talking
+    onSpeechStart: stopTTS,
   })
 
   const handleToggle = () => {
