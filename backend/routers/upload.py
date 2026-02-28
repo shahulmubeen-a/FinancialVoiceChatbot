@@ -54,3 +54,4 @@ async def upload_document(
         parsed_fields_found=fields_found,
         message=f"Document processed. Found {fields_found} financial field(s).",
     )
+

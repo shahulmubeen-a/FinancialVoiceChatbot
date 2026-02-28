@@ -60,6 +60,19 @@ export default function App() {
         <ChatWindow interimText={voice.interimText} />
       </div>
 
+      {/* Footer disclaimer */}
+      <div style={{
+        padding: '6px 16px',
+        borderTop: '1px solid #eee',
+        background: '#fafafa',
+        fontSize: 11,
+        color: '#aaa',
+        textAlign: 'center',
+        flexShrink: 0,
+      }}>
+        General financial guidance only — not regulated financial advice.
+      </div>
+
     </div>
   )
 }

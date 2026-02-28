@@ -4,10 +4,6 @@ from typing import Optional
 
 @dataclass
 class ParsedFinancialData:
-    """
-    Ground-truth anchor for all numbers the LLM is allowed to cite.
-    If a field is None, the LLM must say it wasn't found — never guess.
-    """
     gross_income: Optional[float] = None
     net_pay: Optional[float] = None
     federal_tax: Optional[float] = None
@@ -24,20 +20,23 @@ class ParsedFinancialData:
     extra_fields: dict = field(default_factory=dict)
 
     def to_prompt_block(self) -> str:
+        sym = self.currency_symbol  # use detected symbol, not hardcoded $
+
         def fmt(val: Optional[float]) -> str:
             if val is None:
                 return "NOT FOUND"
-            return f"${val:,.2f}"
+            return f"{sym}{val:,.2f}"
 
         lines = [
             "=== EXTRACTED FINANCIAL DATA (verified) ===",
+            f"Currency:           {sym}",
             f"Gross Income:       {fmt(self.gross_income)}",
-            f"Federal Tax:        {fmt(self.federal_tax)}",
-            f"State Tax:          {fmt(self.state_tax)}",
-            f"Social Security:    {fmt(self.social_security)}",
+            f"Federal/Income Tax: {fmt(self.federal_tax)}",
+            f"State/Local Tax:    {fmt(self.state_tax)}",
+            f"Social Security/NI: {fmt(self.social_security)}",
             f"Medicare:           {fmt(self.medicare)}",
             f"Health Insurance:   {fmt(self.health_insurance)}",
-            f"401(k):             {fmt(self.retirement_401k)}",
+            f"401(k)/Pension:     {fmt(self.retirement_401k)}",
             f"Other Deductions:   {fmt(self.other_deductions)}",
             f"Total Deductions:   {fmt(self.total_deductions)}",
             f"Net Pay:            {fmt(self.net_pay)}",

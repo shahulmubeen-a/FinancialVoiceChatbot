@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { useTTS } from '../hooks/useTTS'
 
-// Strips markdown tables from text before sending to TTS
 function stripTablesForTTS(text) {
   return text
-    .replace(/\|.*\|.*\n(\|[-| :]+\|.*\n)((\|.*\|.*\n)*)/g, ' See the table above for details. ')
+    .replace(
+      /\|.*\|.*\n(\|[-| :]+\|.*\n)((\|.*\|.*\n)*)/g,
+      " I put together a table for the full breakdown. "   // fixed wording
+    )
     .replace(/\|.*\|/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
-// Renders a markdown table as an HTML table
 function renderTable(tableText) {
   const lines = tableText.trim().split('\n').filter(Boolean)
   if (lines.length < 2) return null
@@ -19,7 +20,7 @@ function renderTable(tableText) {
     line.split('|').map((c) => c.trim()).filter(Boolean)
 
   const headers = parseRow(lines[0])
-  const rows = lines.slice(2).map(parseRow)  // skip separator line
+  const rows = lines.slice(2).map(parseRow)
 
   return (
     <table style={{
@@ -57,7 +58,6 @@ function renderTable(tableText) {
   )
 }
 
-// Splits message text into segments: plain text and markdown tables
 function renderMessageContent(text) {
   const tableRegex = /(\|.+\|.*\n(?:\|[-| :]+\|.*\n)(?:\|.+\|.*\n?)*)/g
   const segments = []
@@ -88,11 +88,10 @@ export default function MessageBubble({ message }) {
       message.role === 'assistant' &&
       message.done &&
       !hasSpoken.current &&
-      !message.fromHistory &&   // Bug 1 fix: skip TTS for loaded history messages
+      !message.fromHistory &&
       message.text.trim()
     ) {
       hasSpoken.current = true
-      // Feature 4: strip tables before speaking
       const ttsText = stripTablesForTTS(message.text)
       speak(ttsText)
     }

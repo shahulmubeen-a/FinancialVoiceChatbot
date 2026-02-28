@@ -15,22 +15,22 @@ export default function VoiceListener() {
   const { sendMessage } = useSSE()
   const { stop: stopTTS } = useTTS()
 
+  // Bug 3: called by the hook when silence timer fires and recording auto-stops
+  const onAutoStop = useCallback(() => {
+    setSttActive(false)
+    setStatus('idle')
+  }, [setSttActive, setStatus])
+
   const onFinalTranscript = useCallback(async (text) => {
     if (status === 'thinking' || status === 'speaking') return
-
-    // Bug 3: recognition already stopped inside useSpeechRecognition
-    // so we just sync the UI state here
-    setSttActive(false)
-    setStatus('thinking')
-
     addMessage({ id: Date.now(), role: 'user', text, done: true })
     await sendMessage(sessionId, text)
-    setStatus('idle')
-  }, [status, addMessage, sendMessage, sessionId, setStatus, setSttActive])
+  }, [status, addMessage, sendMessage, sessionId])
 
   const { start, stop, isListening, interimText } = useSpeechRecognition({
     onFinalTranscript,
     onSpeechStart: stopTTS,
+    onAutoStop,              // Bug 3: sync button state when auto-stopped
   })
 
   const handleToggle = () => {

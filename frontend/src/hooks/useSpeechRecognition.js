@@ -1,12 +1,13 @@
 import { useRef, useState, useCallback } from 'react'
 
-const SILENCE_TIMEOUT_MS = 2000
+const SILENCE_TIMEOUT_MS = 1000
 
-export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
+export function useSpeechRecognition({ onFinalTranscript, onSpeechStart, onAutoStop }) {
   const recognitionRef = useRef(null)
   const silenceTimerRef = useRef(null)
   const accumulatedFinalRef = useRef('')
   const isWarmingUpRef = useRef(false)
+  const isStoppingRef = useRef(false)        // Bug 2: tracks intentional stop
   const [interimText, setInterimText] = useState('')
   const [isListening, setIsListening] = useState(false)
 
@@ -17,21 +18,18 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     }
   }
 
-  // Bug 2 fix: only wipe transcript AFTER successful submission, not on stop
-  const resetTranscript = useCallback(() => {
-    accumulatedFinalRef.current = ''
-    setInterimText('')
-  }, [])
-
-  const stopRecognition = useCallback(() => {
+  // Stops the recognition engine without wiping the displayed transcript
+  const stopEngine = useCallback(() => {
+    isStoppingRef.current = true
     clearSilenceTimer()
     if (recognitionRef.current) {
-      recognitionRef.current.onend = null  // prevent auto-restart
+      recognitionRef.current.onend = null   // prevent auto-restart
+      recognitionRef.current.onresult = null
       recognitionRef.current.stop()
       recognitionRef.current = null
     }
     setIsListening(false)
-    // Bug 2 fix: do NOT wipe interimText here — keep what was spoken visible
+    // Bug 2: do NOT clear interimText here — keep whatever was spoken visible
   }, [])
 
   const startSilenceTimer = useCallback(() => {
@@ -39,12 +37,17 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     silenceTimerRef.current = setTimeout(() => {
       const finalText = accumulatedFinalRef.current.trim()
       if (finalText) {
-        resetTranscript()             // clear transcript only after submission
-        stopRecognition()             // Bug 3 fix: auto-stop after each submission
-        onFinalTranscript(finalText)
+        const textToSend = finalText
+        // Clear transcript and stop engine before firing callback
+        accumulatedFinalRef.current = ''
+        setInterimText('')
+        stopEngine()
+        // Bug 3: notify parent that we auto-stopped
+        if (onAutoStop) onAutoStop()
+        onFinalTranscript(textToSend)
       }
     }, SILENCE_TIMEOUT_MS)
-  }, [onFinalTranscript, resetTranscript, stopRecognition])
+  }, [onFinalTranscript, onAutoStop, stopEngine])
 
   const start = useCallback(() => {
     const SpeechRecognition =
@@ -55,19 +58,26 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
       return false
     }
 
+    isStoppingRef.current = false
+    accumulatedFinalRef.current = ''
+    setInterimText('')
+
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.interimResults = true
+    recognition.maxAlternatives = 1
     recognition.lang = 'en-US'
 
     recognition.onstart = () => {
       setIsListening(true)
-      accumulatedFinalRef.current = ''
       isWarmingUpRef.current = true
       setTimeout(() => { isWarmingUpRef.current = false }, 600)
     }
 
     recognition.onresult = (event) => {
+      // Bug 2: if we're in the middle of intentionally stopping, ignore results
+      if (isStoppingRef.current) return
+
       if (onSpeechStart) onSpeechStart()
 
       let interim = ''
@@ -87,6 +97,7 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
         if (!isWarmingUpRef.current) startSilenceTimer()
       }
 
+      // Show live transcript
       setInterimText(accumulatedFinalRef.current + interim)
     }
 
@@ -97,8 +108,8 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     }
 
     recognition.onend = () => {
-      // Auto-restart only if still supposed to be listening
-      if (recognitionRef.current === recognition) {
+      // Auto-restart only if not intentionally stopped
+      if (!isStoppingRef.current && recognitionRef.current === recognition) {
         try { recognition.start() } catch { /* already starting */ }
       }
     }
@@ -108,12 +119,11 @@ export function useSpeechRecognition({ onFinalTranscript, onSpeechStart }) {
     return true
   }, [startSilenceTimer, onSpeechStart])
 
-  // Public stop — used by the toggle button
-  // Bug 2 fix: preserve transcript text, just stop the engine
+  // Manual stop from the button — preserve transcript (Bug 2)
   const stop = useCallback(() => {
-    stopRecognition()
-    // Don't reset transcript here — user can see what was captured
-  }, [stopRecognition])
+    stopEngine()
+    // intentionally do NOT clear interimText
+  }, [stopEngine])
 
   return { start, stop, isListening, interimText }
 }
