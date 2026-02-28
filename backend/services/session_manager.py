@@ -4,6 +4,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from services.rag_pipeline import DocumentStore
+from services.persistence import (
+    save_session, save_message, delete_session_from_db, touch_session
+)
 from models.financial import ParsedFinancialData
 from config import get_settings
 from utils.file_handler import cleanup_session_dir
@@ -24,6 +27,7 @@ class Session:
 
     def touch(self):
         self.last_active = datetime.utcnow()
+        touch_session(self.session_id)
 
     @property
     def has_document(self) -> bool:
@@ -40,6 +44,7 @@ class SessionManager:
     def create_session(self) -> str:
         session_id = str(uuid.uuid4())
         self._sessions[session_id] = Session(session_id)
+        save_session(session_id)
         logger.info(f"Session created: {session_id}")
         return session_id
 
@@ -51,6 +56,7 @@ class SessionManager:
 
     def delete_session(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)
+        delete_session_from_db(session_id)
         cleanup_session_dir(session_id)
         logger.info(f"Session deleted: {session_id}")
 
@@ -62,6 +68,8 @@ class SessionManager:
                 if s.is_expired(settings.session_ttl_minutes)
             ]
             for sid in expired:
-                self.delete_session(sid)
+                # Only remove from memory, keep in DB
+                self._sessions.pop(sid, None)
+                cleanup_session_dir(sid)
             if expired:
-                logger.info(f"Expired {len(expired)} session(s).")
+                logger.info(f"Expired {len(expired)} session(s) from memory.")

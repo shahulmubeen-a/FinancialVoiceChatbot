@@ -5,6 +5,7 @@ from pydantic import SecretStr
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from services.session_manager import Session
+from services.persistence import save_message, update_session_title
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 def build_llm() -> ChatGroq:
     return ChatGroq(
-        api_key=SecretStr(settings.groq_api_key),  # SecretStr required by langchain-groq
+        api_key=SecretStr(settings.groq_api_key),
         model="llama-3.1-8b-instant",
         temperature=0.4,
         max_tokens=512,
@@ -47,7 +48,6 @@ async def stream_response(
     llm: ChatGroq,
 ) -> AsyncGenerator[str, None]:
     system_prompt = _build_system_prompt(session, user_message)
-
     trimmed_history = session.chat_history[-(session.max_history_turns * 2):]
 
     messages = (
@@ -59,12 +59,21 @@ async def stream_response(
     full_response = ""
 
     async for chunk in llm.astream(messages):
-        # chunk.content can be str or list depending on model — always coerce to str
         raw = chunk.content
         token = raw if isinstance(raw, str) else ""
         if token:
             full_response += token
             yield token
 
+    # Persist to DB
+    save_message(session.session_id, "user", user_message)
+    save_message(session.session_id, "assistant", full_response)
+
+    # Auto-title the session from the first user message
+    if len(session.chat_history) == 0:
+        title = user_message[:60] + ("..." if len(user_message) > 60 else "")
+        update_session_title(session.session_id, title)
+
+    # Keep in-memory history
     session.chat_history.append(HumanMessage(content=user_message))
     session.chat_history.append(AIMessage(content=full_response))

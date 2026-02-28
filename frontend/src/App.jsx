@@ -5,6 +5,7 @@ import ChatWindow from './components/ChatWindow'
 import FileUpload from './components/FileUpload'
 import StatusBar from './components/StatusBar'
 import VoiceListener from './components/VoiceListener'
+import SessionList from './components/SessionList'
 
 export default function App() {
   const setSessionId = useChatStore((s) => s.setSessionId)
@@ -16,8 +17,6 @@ export default function App() {
       .catch((err) => console.error('Session init failed:', err))
   }, [setSessionId])
 
-  // VoiceListener is a logic component — we use it as a hook-provider here
-  // by rendering it and pulling out what we need via its return value
   const voice = VoiceListener()
 
   if (!sessionId) {
@@ -39,6 +38,7 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexShrink: 0,
       }}>
         <strong>💰 Finance Assistant</strong>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -54,7 +54,11 @@ export default function App() {
 
       <StatusBar />
 
-      <ChatWindow interimText={voice.interimText} />
+      {/* Body: sidebar + chat */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <SessionList />
+        <ChatWindow interimText={voice.interimText} />
+      </div>
 
     </div>
   )

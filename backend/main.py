@@ -8,10 +8,10 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from routers import session, upload, chat
+from routers import session, upload, chat, tts
 from dependencies import get_session_manager
+from services.persistence import init_db
 from config import get_settings
-from routers import session, tts, upload, chat
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,6 +31,7 @@ def _rate_limit_handler(request: Request, exc: Any) -> JSONResponse:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
     manager = get_session_manager()
     task = asyncio.create_task(manager.run_expiry_loop())
     logger.info("Finance Voice Assistant started.")

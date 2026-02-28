@@ -3,6 +3,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Form
 from models.schemas import UploadResponse
 from services.session_manager import SessionManager
 from services.document_parser import parse_document
+from services.persistence import update_session_doc
 from dependencies import get_session_manager
 from utils.file_handler import save_upload, delete_file
 
@@ -30,6 +31,9 @@ async def upload_document(
     session.document_store.ingest(raw_text)
     session.parsed_data = parsed_data
 
+    filename = file.filename or "uploaded_file"
+    update_session_doc(session_id, filename)
+
     fields_found = sum(
         1 for f in [
             parsed_data.gross_income,
@@ -43,8 +47,6 @@ async def upload_document(
         ]
         if f is not None
     )
-
-    filename = file.filename or "uploaded_file"  # file.filename can be None
 
     return UploadResponse(
         session_id=session_id,

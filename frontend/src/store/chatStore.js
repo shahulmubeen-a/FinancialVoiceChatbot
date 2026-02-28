@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 
-const useChatStore = create((set, get) => ({
-  // Session
+const useChatStore = create((set) => ({
+  // Active session
   sessionId: null,
   setSessionId: (id) => set({ sessionId: id }),
 
-  // Messages: { id, role: 'user'|'assistant', text, done }
+  // Messages
   messages: [],
+  setMessages: (messages) => set({ messages }),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
   appendToLast: (token) => set((s) => {
     const msgs = [...s.messages]
@@ -23,7 +24,7 @@ const useChatStore = create((set, get) => ({
     return { messages: msgs }
   }),
 
-  // Status: 'idle' | 'listening' | 'thinking' | 'speaking'
+  // Status
   status: 'idle',
   setStatus: (status) => set({ status }),
 
@@ -31,9 +32,13 @@ const useChatStore = create((set, get) => ({
   docName: null,
   setDocName: (name) => set({ docName: name }),
 
-  // Whether STT is active (user clicked Start once)
+  // STT
   sttActive: false,
   setSttActive: (val) => set({ sttActive: val }),
+
+  // Session list (for sidebar)
+  sessionList: [],
+  setSessionList: (list) => set({ sessionList: list }),
 }))
 
 export default useChatStore

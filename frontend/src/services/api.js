@@ -1,13 +1,25 @@
-const BASE = ''  // proxied via vite to localhost:8000
+const BASE = ''
 
 export async function createSession() {
   const res = await fetch(`${BASE}/session/new`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to create session')
-  return res.json()  // { session_id }
+  return res.json()
 }
 
 export async function deleteSession(sessionId) {
   await fetch(`${BASE}/session/${sessionId}`, { method: 'DELETE' })
+}
+
+export async function getAllSessions() {
+  const res = await fetch(`${BASE}/session/all`)
+  if (!res.ok) throw new Error('Failed to fetch sessions')
+  return res.json()
+}
+
+export async function getSessionMessages(sessionId) {
+  const res = await fetch(`${BASE}/session/${sessionId}/messages`)
+  if (!res.ok) throw new Error('Failed to fetch messages')
+  return res.json()
 }
 
 export async function uploadDocument(sessionId, file) {
@@ -22,7 +34,6 @@ export async function uploadDocument(sessionId, file) {
   return res.json()
 }
 
-// Returns a raw fetch Response for SSE streaming — caller handles the stream
 export async function streamChat(sessionId, message) {
   const res = await fetch(`${BASE}/chat/stream`, {
     method: 'POST',
